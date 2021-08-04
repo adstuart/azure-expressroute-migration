@@ -22,6 +22,8 @@ Many customers on Azure leverage ExpressRoute for reliable hybrid connectivity. 
 
 This guides suggest an approach to this migration process that focuses on seamless failover, de-risking rollback, and understanding the correct ordering of steps. Each step will require you to leverage existing knowledge of ExpressRoute, and also links will be provided to go in to more technical detail using Azure documentation. 
 
+:warning: This document assumes pre-existing knowledge of Azure, ExpressRoute and BGP. It is not designed to be read in isolation, but rather act as a high level guide, pointing you in the right direction, and at the right places.
+
 # Context
 
 When having any ExpressRoute discussion its beneficial to agree on terms. This is best visualized in layers, highlighting the different components in any ExpressRoute design; 
@@ -164,6 +166,8 @@ What if you've done the previous step and things are not working? Your app owner
 ## Cleanup
 
 Once you are happy the migration was a success, don't forget to ask your provider to decommission your old ExpressRoute circuit, once this is complete you can delete the ExpressRoute object itself in the Azure portal.
+
+If like most customers you are only using the ExpressRoute Private Peering you can now stop, good job! If you have an existing Public or Microsoft peering to migrate as well, read on...
 
 # Public/Microsoft Peering Migration
 
