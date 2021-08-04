@@ -92,7 +92,7 @@ If you are using circuit authorsations for cross-subscription gateway attachment
 
 At this point you have verified the new circuit is ready for production workloads, now you have to decide on your migration approach;
 
-6666-3
+6666-4
 
 
 
