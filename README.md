@@ -86,7 +86,7 @@ Create a new Virtual Network with some test IP address space that does not overl
 
 If you are using circuit authorsations for cross-subscription gateway attachment (you checked that already right? ;) Then you are able to prep these ahead of time on the new circuit. Generate the new authorsations and they will remain in the "available" state until redeemed at the gateway level. One less job to do during the migration window itself. 
 
-![](images\2021-08-04-13-23-28.png)
+![](images/2021-08-04-13-24-58.png)
 
 ## Migration options
 
