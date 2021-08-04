@@ -92,6 +92,10 @@ If you are using circuit authorsations for cross-subscription gateway attachment
 
 At this point you have verified the new circuit is ready for production workloads, now you have to decide on your migration approach;
 
+delete me
+1
+
+
 ### Delete and attach; more downtime but simple
 
 - Delete the connection objects that links your old circuit to your ER Gateways
