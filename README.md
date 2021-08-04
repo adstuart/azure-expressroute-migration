@@ -64,6 +64,8 @@ Once this is complete, you should be able to produce some diagrams like the foll
 
 # Private Peering Migration
 
+![](images/2021-08-04-23-26-45.png)
+
 ## Create new ExpressRoute circuit
 
 https://docs.microsoft.com/en-us/azure/expressroute/expressroute-howto-circuit-portal-resource-manager
@@ -165,9 +167,11 @@ Once you are happy the migration was a success, don't forget to ask your provide
 
 # Public/Microsoft Peering Migration
 
+![](images/2021-08-04-23-28-33.png)
+
 https://docs.microsoft.com/en-us/azure/expressroute/how-to-move-peering
 
-
+-
 
 # Closing
 
