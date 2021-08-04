@@ -93,7 +93,7 @@ If you are using circuit authorsations for cross-subscription gateway attachment
 At this point you have verified the new circuit is ready for production workloads, now you have to decide on your migration approach;
 
 delete me
-1234
+12345
 
 
 ### Delete and attach; more downtime but simple
