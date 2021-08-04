@@ -20,7 +20,7 @@ Many customers on Azure leverage ExpressRoute for reliable hybrid connectivity. 
 - Downgrading an ER circuit bandwidth requires a new circuit https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs#can-i-change-the-bandwidth-of-an-expressroute-circuit
 - Upgrading an ER circuit can sometimes require a new circuit, depending if the existing underlying port has capacity to support the bandwidth increase https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs#can-i-change-the-bandwidth-of-an-expressroute-circuit
 
-This guide provides step-by-step instructions on how to approach this circuit migration process.
+This guides suggest an approach to this migration process that focuses on seamless failover, de-risking rollback, and understanding the correct ordering of steps. Each step will require you to leverage existing knowledge of ExpressRoute, and also links will be provided to go in to more technical detail using Azure documentation. 
 
 # Context
 
@@ -34,7 +34,7 @@ When having any ExpressRoute discussion its beneficial to agree on terms. This i
 
 <image>
 
-# Existing configuration
+# Capture existing configuration
 
 Before removing the old connectivity, we should capture its logical configuration and form a baseline diagram to iterate from. Important information shown in the example diagram below includes;
 
@@ -64,7 +64,7 @@ Once this is complete, you should be able to produce some diagrams like the foll
 
 # Private Peering Migration
 
-## Create new ER circuit
+## Create new ExpressRoute circuit
 
 https://docs.microsoft.com/en-us/azure/expressroute/expressroute-howto-circuit-portal-resource-manager
 
@@ -82,32 +82,56 @@ Create a new Virtual Network with some test IP address space that does not overl
 
 > Take this opportunity to become familiar with all the rich ExpressRoute information that is available from the CLI. For example, a good idea at this step is to verify you are advertising all the required routes from On-Premises with the expected AS-PATH manipulation, if any. A great guide to get started https://blog.cloudtrooper.net/2021/07/12/cli-based-analysis-of-an-expressroute-private-peering/
 
-## Prep circuit authorsations
+## Pre-provision circuit authorizations
 
-If you are using circuit authorsations for cross-subscription gateway attachment (you checked that already right? ;) Then you are able to prep these ahead of time on the new circuit. Generate the new authorsations and they will remain in the "available" state until redeemed at the gateway level. One less job to do during the migration window itself. 
+If you are using circuit authorizations for cross-subscription gateway attachment (you checked that already right? ;) ) Then you are able to deploy these ahead of time on the new circuit. Generate the new authorsations and they will remain in the "available" state until redeemed at the gateway level. One less job to do during the migration window itself. 
 
 ![](images/2021-08-04-13-24-58.png)
 
-## Migration options
+## Configure BGP routing to favour existing circuit
 
-At this point you have verified the new circuit is ready for production workloads, now you have to decide on your migration approach;
+Before we attach our new circuit to the production ExpressRoute Gateway, we want to ensure that traffic only fails over to this circuit when _we_ decide, and not unexpectedly due to routing logic we may not understand. We want to do this to ensure that traffic to and from Azure remains symmetrical, this is especially important if On-Premises Firewalls are in use.
 
-6666-11
+- To control traffic from **Azure to On-Premises** the most straight forward method is to change the Weight parameter, configured at the Connection object level. The default is 0, a higher weight wins, therefore lets set our existing connection to 100.
+
+![](images/2021-08-04-22-30-44.png)
+
+- To control traffic from **On-Premises to Azure** the most straight forward method is to use BGP as-path-prepend. For now, we can leave this at the default on the existing circuit (The default is assumed to be not using as-path-prepend), but we will need this later for the migration, so configure a route-map on your on-premises router than can be used later.
+
+More info: https://docs.microsoft.com/en-us/azure/expressroute/expressroute-optimize-routing
+
+## Configure BGP as-path-prepend on new circuit
+
+Now that we understand, and are in control of, the routing behaviour on the existing circuit, we can attach the new circuit to operate in a standby state. Part of this will be to use as-path-prepend when advertising in routes to Azure on the new circuit.
+
+Complete this configuration on your edge device/router, and verify the received routes on the MSEE. You can do this using the CLI (see earlier section) or from within the Azure Portal. 
+
+![](images/2021-08-04-22-41-33.png)
+
+Here is an example of a circuit that is receiving as-path-prepended routes from an On-Premises router. 
+
+![](images/2021-08-04-22-43-19.png)
+
+> Note! At this stage the circuit is still not connected to your ExpressRoute Gateway, but you have verified the route advertisements and attributes. 
+
+
+## Connect new circuit to existing ExpressRoute Gateway
 
 
 
-### Delete and attach; more downtime but simple
-
-- Delete the connection objects that links your old circuit to your ER Gateways
-- As soon as you initiate this process, you will lose connectivity via the ER circuit
-- Create a new connection object that links your new circuit to your ER Gateways
+- 
+- Create a new connection object that links your new circuit to your ER Gateway, ensure the Weight is set to 0. 
+- Verify 
 
 Plan for 10-30 minutes change window.
 
 If you have multiple existing ER circuits
 
-### Attach and influence, less downtime but more complex
+### Less downtime but complex
 
+This approach favours logical routing manipulation routing by allowing only one circuit to be active at any one time, ensuring that traffic flow in/out of Azure remains symmetrical. 
+
+- Delete the connection objects that links your old circuit to your ER Gateways
 
 # Public/Microsoft Peering Migration
 
