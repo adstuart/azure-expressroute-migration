@@ -2,14 +2,27 @@
 
 # Contents
 
+<!-- TOC -->
+
+- [ExpressRoute migration guide](#expressroute-migration-guide)
+- [Contents](#contents)
 - [Introduction](#introduction)
-- [Option 1 – Code the complexity](#option-1---code-the-complexity)
-- [Option 2 - 3rd party GSLB Network Virtual Appliance (NVA)](#option-2---3rd-party-gslb-network-virtual-appliance--nva-)
-- [Option 3 - Azure Traffic Manager](#option-3---azure-traffic-manager)
-- [Option 4 - Azure Front Door](#option-4---azure-front-door)
-- [Option 5 - Azure Load Balancer](#option-5---azure-load-balancer)
-- [Option 6 - Application Gateway](#option-6---application-gateway)
+- [Context](#context)
+- [Capture existing configuration](#capture-existing-configuration)
+- [Private Peering Migration](#private-peering-migration)
+    - [Create new ExpressRoute circuit](#create-new-expressroute-circuit)
+    - [Create test Virtual Network and link to circuit](#create-test-virtual-network-and-link-to-circuit)
+    - [Pre-provision circuit authorizations](#pre-provision-circuit-authorizations)
+    - [Configure BGP routing to favour existing circuit](#configure-bgp-routing-to-favour-existing-circuit)
+    - [Configure BGP as-path-prepend on new circuit](#configure-bgp-as-path-prepend-on-new-circuit)
+    - [Connect new circuit to existing ExpressRoute Gateway](#connect-new-circuit-to-existing-expressroute-gateway)
+    - [Move traffic to new ExpressRoute circuit](#move-traffic-to-new-expressroute-circuit)
+    - [Rollback](#rollback)
+    - [Cleanup](#cleanup)
+- [Public/Microsoft Peering Migration](#publicmicrosoft-peering-migration)
 - [Closing](#closing)
+
+<!-- /TOC -->
 
 # Introduction
 
