@@ -76,7 +76,12 @@ Follow the above guide to create the new circuit with your requirement parameter
 
 https://docs.microsoft.com/en-us/azure/expressroute/expressroute-howto-linkvnet-arm
 
-Create a new Virtual Network with some test IP address space that does not overlap with either your current On-Premises address space, or your existing Azure VNet(s) address space. Deploy a Virtual Machine for testing. The purposes of this step is to prove out end-to-end connectivity across the new circuit, prior to using it within your production environment. If done correctly, your On-Premises network can now route traffic to this new test VNet, and vice versa. Carry out your required commissioning tests, latency, throughput etc
+- Create a new Virtual Network with some test IP address space that does not overlap with either your current On-Premises address space, or your existing Azure VNet(s) address space. 
+- Deploy both a Virtual Machine for testing, and an ExpressRoute Virtual Network Gateway. 
+- Connect the test Gateway to your new circuit via a Connection object
+- The purposes of this step is to prove out end-to-end connectivity across the new circuit, prior to using it within your production environment. 
+- If done correctly, your On-Premises network can now route traffic to this new test VNet, and vice versa. 
+- Carry out your required commissioning tests, latency, throughput etc
 
 <image>
 
@@ -117,21 +122,46 @@ Here is an example of a circuit that is receiving as-path-prepended routes from 
 
 ## Connect new circuit to existing ExpressRoute Gateway
 
+At this point we have a high degree of confidence in the new circuit; we have proved end-to-end connectivity, we know the routes will be unfavorable thanks to as-path manipulation, and we can therefore move to the next stage of connecting the new circuit to the production Gateway and placing it in an effective standby state.
 
+- Create a new connection object that links your new circuit to your ExpressRo ute Gateway, **ensure the Weight is set to 0**. 
+- Verify using AZ CLI that the ExpressRoute gateway is your on-premises prefixes via both circuits, and that the as-path attributes are as you expect. _The example below shows my On-Premises prefix of 192.168.2.0/24 being learnt via 4 BGP neighbours (each ER circuit includes two peerings to the Gateway), representing in my lab two ER circuits. Routes learnt from one circuit have a shorter as-path and will therefore be preferred._
 
-- 
-- Create a new connection object that links your new circuit to your ER Gateway, ensure the Weight is set to 0. 
-- Verify 
+```
+adam@Azure:~$ az network vnet-gateway list-learned-routes -n ER-GW-WE -g GBB-ER-LAB-WE -o table | grep 192.168.2.0
+192.168.2.0/24     EBgp      10.10.1.6     12076-65000-65001-65001-65002        32769     10.10.1.6
+192.168.2.0/24     EBgp      10.10.1.7     12076-65000-65001-65001-65002        32769     10.10.1.7
+192.168.2.0/24     EBgp      10.10.1.5     12076-65000-65001-65001-65001-65002  32769     10.10.1.5
+192.168.2.0/24     EBgp      10.10.1.4     12076-65000-65001-65001-65001-65002  32769     10.10.1.4
+```
 
-Plan for 10-30 minutes change window.
+We have completed 6 steps, and we still are yet to put any production traffic on our new ER circuit! So lets move on...
 
-If you have multiple existing ER circuits
+## Move traffic to new ExpressRoute circuit
 
-### Less downtime but complex
+At this point you have two options;
 
-This approach favours logical routing manipulation routing by allowing only one circuit to be active at any one time, ensuring that traffic flow in/out of Azure remains symmetrical. 
+- a) Delete the connection object that links your old circuit to your ExpressRoute Gateway. In effect forcing traffic to/from Azure over your new circuit. This will incur downtime whilst the logical network routing catches up; between 10s to ~240s depending on the configuration of your On-Premises network and existing ER circuit. The main toggle to speed this process up, is BFD. https://docs.microsoft.com/en-us/azure/expressroute/expressroute-bfd
 
-- Delete the connection objects that links your old circuit to your ER Gateways
+- b) Modify weight and AS-path to preference the new circuit. By repeating the process used above to de-preference the new circuit, we can use the same tools to de-preference the old circuit. I.e. we set Weight to 200 on the connection object to our new circuit, and in parallel change our On-Premises route-maps to as-path-prepend on the existing ER circuit, and remove this from the new circuit. In my testing this approach can result in a more seamless failover and less downtime, but your mileage may vary, depending on your On-Premises network setup.
+
+Which approach you choose will depend on factors that include;
+
+- Who is driving the migration? I would suggest that you always need your On-Premises network team on standby, but option (a) allows the cut-over to be initiated entirely from Azure.
+- Are any On-Premises firewalls being used? Option (a) guarantees symmetrical traffic, whilst option (b) may result in temporary asymmetry due to BGP propagation timing
+- Appetite for downtime. Option (a), whilst simpler, does come with the guaranteed downtime whilst BGP re-converges. Option (b) is more complex, but may offer a more seamless cut-over experience
+
+## Rollback
+
+What if you've done the previous step and things are not working? Your app owners are still reporting problems after a period of UAT, and you need to press the "go back" button? 
+
+- If you went with option (a), reconnect the old circuit by re-creating a connection object that links the old circuit to the ExpressRoute gateway.
+
+- If you went with option (b), reverse your weight and as-path changes.
+
+## Cleanup
+
+Once you are happy the migration was a success, don't forget to ask your provider to decommission your old ExpressRoute circuit, once this is complete you can delete the ExpressRoute object itself in the Azure portal.
 
 # Public/Microsoft Peering Migration
 
