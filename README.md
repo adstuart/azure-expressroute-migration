@@ -27,40 +27,48 @@
 
 # 1. Introduction
 
-Many customers on Azure leverage ExpressRoute for reliable hybrid connectivity. Sometimes these same customers may need to implement a new ExpressRoute circuit, and have a desire to decommission their old circuit. Common drivers for this requirement include:
+Many customers on Azure leverage ExpressRoute for reliable hybrid connectivity. Sometimes these same customers may need to implement a new ExpressRoute circuit, and have a desire to decommission their old circuit. Common drivers for this scenario include:
 
-- Mergers and acquisitions resulting on consolidation of network providers
-- A change of ExpressRoute provider
-- Downgrading an ER circuit bandwidth requires a new circuit https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs#can-i-change-the-bandwidth-of-an-expressroute-circuit
-- Upgrading an ER circuit can sometimes require a new circuit, depending if the existing underlying port has capacity to support the bandwidth increase https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs#can-i-change-the-bandwidth-of-an-expressroute-circuit
+- Mergers and acquisitions resulting in consolidation of network providers
+- A change of ExpressRoute provider or incumbent WAN provider
+- [Downgrading an ER circuit bandwidth requires a new circuit](https://docs.microsoft.com/en-us/azure/expressroute/)expressroute-faqs#can-i-change-the-bandwidth-of-an-expressroute-circuit
+- Upgrading an ER circuit can [sometimes](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs#can-i-change-the-bandwidth-of-an-expressroute-circuit) require a new circuit, depending if the existing underlying port has capacity to support the bandwidth increase 
 
-This guides suggest an approach to this migration process that focuses on seamless failover, de-risking rollback, and understanding the correct ordering of steps. Each step will require you to leverage existing knowledge of ExpressRoute, and also links will be provided to go in to more technical detail using Azure documentation. 
+This guides suggest an approach to this migration process that focuses on seamless failover, de-risking rollback, and understanding the correct ordering of steps. Each step will require you to leverage your existing knowledge of ExpressRoute, links will be provided to Azure documentation as required for further technical depth. 
 
-:warning: This document assumes pre-existing knowledge of Azure, ExpressRoute and BGP. It is not designed to be read in isolation, but rather act as a high level guide, pointing you in the right direction, and at the right places.
+:warning: This document assumes pre-existing knowledge of Azure, ExpressRoute and BGP. It is not designed to be read in isolation, but rather act as a high level guide, pointing you in the right direction, at the right places and get the project team asking the right questions to plan for success.
 
 # 2. Context
 
 When having any ExpressRoute discussion its beneficial to agree on terms. This is best visualized in layers, highlighting the different components in any ExpressRoute design; 
 
-- Gateway
-- Connection
-- Circuit
-- Partner
-- Customer
+- **Gateway**; lives in the GatewaySubnet in your Virtual Network (VNet)
+- **Connection**; connects your **Gateway** to a
+- **Circuit**; the logical configuration at the Microsoft edge network, used to connect your network to ours. **Not** located in the Azure Region, lives in the Peering Exchange, aka Edge site, aka PoP. Owned by companies like NGN, Equinix and Telehouse.
+- **Partner**; The company helping you bridge the gap bewteen your network and Microosfts by faciliating, most commonly, a collection of virtual layer-2 circuits, which you connect to
+- **Customer**; Your devices, most often used for Layer-3 BGP termination.
 
-<image>
+Customer/partner lines may blur, also [ExpressRoute Direct](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-erdirect-about) removes the Partner layer. 
+
+![](images/2021-08-05-12-57-52.png)
+
+This document presents migration steps with a simple scenario in mind; _"I have one existing ExpressRoute circuit, I am implementing a new ExpressRoute circuit, how do I get from A to B?"_. The logic and approach herein can be used for more complex scenarios involving multiple circuits (before or after migration), multiple Azure regions and/or multiple ExpressRoute Gateways.
 
 ## 2.1. Good to know
 
-Up to ~2019 it was only possible to link a single ExpressRoute circuit from a Edge location to an ExpressRoute Gateway. I.e. you could link multiple circuits, but they had to be from different edge locations / PoPs. Now, we are able to simultaneously link up to 4 circuits from the same peering location to an ExpressRoute gateway. This gives us more flexibility in the migration approach presented herein.
+Up until ~2019 it was only possible to connect a unique peering location to an ExpressRoute Gateway with a single ExpressRoute circuit. I.e. you could link multiple circuits to an ER Gateway, but they had to be from different peering locations. Today, this limit is raised, we are able to simultaneously link up to 4 circuits from the same peering location to an ExpressRoute gateway. This gives us more flexibility when planning the approach to migration.
 
-<image>
+I.e. the following _is_ now [possible](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-about-virtual-network-gateways#aggthroughput).
+
+![](images/2021-08-05-13-36-48.png)
 
 ## 2.2. Good to consider
 
-If as part of your ExpressRoute migration project you are implementing more circuits, or adding resilience, make sure to consider the ExpressRoute Gateway SKU you are using. This should be fit for purpose and aligned with your resilience and performance goals. If you are scheduling maintenance windows to upgrade your circuit, now could be a good time to plan for Gateways changes if required. https://docs.microsoft.com/en-us/azure/expressroute/expressroute-about-virtual-network-gateways#aggthroughput
+If, as part of your ExpressRoute migration project, you are implementing more circuits for resilience, make sure to also consider the [ExpressRoute Gateway SKU](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-about-virtual-network-gateways) you are using. This should be fit for purpose and aligned with your resilience and performance goals. If you are scheduling maintenance windows to upgrade your circuit, now could be a good time to plan for Gateways changes, if they are required. 
 
+A common ExpressRoute anti-pattern (don't do this :) ):
 
+![](images/2021-08-05-13-53-21.png)
 
 ## 2.3. Capture existing configuration
 
