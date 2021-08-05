@@ -1,31 +1,31 @@
-# ExpressRoute migration guide
+ # ExpressRoute migration guide
 
-# Contents
+ ## Contents
 
 <!-- TOC -->
 
-- [ExpressRoute migration guide](#expressroute-migration-guide)
-- [Contents](#contents)
-- [Introduction](#introduction)
-- [Context](#context)
-    - [Good to know](#good-to-know)
-- [Capture existing configuration](#capture-existing-configuration)
-- [Private Peering Migration](#private-peering-migration)
-    - [Create new ExpressRoute circuit](#create-new-expressroute-circuit)
-    - [Create test Virtual Network and link to circuit](#create-test-virtual-network-and-link-to-circuit)
-    - [Pre-provision circuit authorizations](#pre-provision-circuit-authorizations)
-    - [Configure BGP routing to favour existing circuit](#configure-bgp-routing-to-favour-existing-circuit)
-    - [Configure BGP as-path-prepend on new circuit](#configure-bgp-as-path-prepend-on-new-circuit)
-    - [Connect new circuit to existing ExpressRoute Gateway](#connect-new-circuit-to-existing-expressroute-gateway)
-    - [Move traffic to new ExpressRoute circuit](#move-traffic-to-new-expressroute-circuit)
-    - [Rollback](#rollback)
-    - [Cleanup](#cleanup)
-    - [Migrating multiple circuits](#migrating-multiple-circuits)
-- [Public/Microsoft Peering Migration](#publicmicrosoft-peering-migration)
+- [1. Introduction](#1-introduction)
+- [2. Context](#2-context)
+    - [2.1. Good to know](#21-good-to-know)
+    - [2.2. Good to consider](#22-good-to-consider)
+    - [2.3. Capture existing configuration](#23-capture-existing-configuration)
+- [3. Private Peering Migration](#3-private-peering-migration)
+    - [3.1. Create new ExpressRoute circuit](#31-create-new-expressroute-circuit)
+    - [3.2. Create test Virtual Network and link to circuit](#32-create-test-virtual-network-and-link-to-circuit)
+    - [3.3. Pre-provision circuit authorizations](#33-pre-provision-circuit-authorizations)
+    - [3.4. Configure BGP routing to favour existing circuit](#34-configure-bgp-routing-to-favour-existing-circuit)
+    - [3.5. Configure BGP as-path-prepend on new circuit](#35-configure-bgp-as-path-prepend-on-new-circuit)
+    - [3.6. Connect new circuit to existing ExpressRoute Gateway](#36-connect-new-circuit-to-existing-expressroute-gateway)
+    - [3.7. Move traffic to new ExpressRoute circuit](#37-move-traffic-to-new-expressroute-circuit)
+    - [3.8. Rollback](#38-rollback)
+    - [3.9. Cleanup](#39-cleanup)
+    - [3.10. Migrating multiple circuits](#310-migrating-multiple-circuits)
+- [4. Public/Microsoft Peering Migration](#4-publicmicrosoft-peering-migration)
+- [5. Further reading and useful links](#5-further-reading-and-useful-links)
 
 <!-- /TOC -->
 
-# Introduction
+# 1. Introduction
 
 Many customers on Azure leverage ExpressRoute for reliable hybrid connectivity. Sometimes these same customers may need to implement a new ExpressRoute circuit, and have a desire to decommission their old circuit. Common drivers for this requirement include:
 
@@ -38,7 +38,7 @@ This guides suggest an approach to this migration process that focuses on seamle
 
 :warning: This document assumes pre-existing knowledge of Azure, ExpressRoute and BGP. It is not designed to be read in isolation, but rather act as a high level guide, pointing you in the right direction, and at the right places.
 
-# Context
+# 2. Context
 
 When having any ExpressRoute discussion its beneficial to agree on terms. This is best visualized in layers, highlighting the different components in any ExpressRoute design; 
 
@@ -50,13 +50,19 @@ When having any ExpressRoute discussion its beneficial to agree on terms. This i
 
 <image>
 
-## Good to know
+## 2.1. Good to know
 
 Up to ~2019 it was only possible to link a single ExpressRoute circuit from a Edge location to an ExpressRoute Gateway. I.e. you could link multiple circuits, but they had to be from different edge locations / PoPs. Now, we are able to simultaneously link up to 4 circuits from the same peering location to an ExpressRoute gateway. This gives us more flexibility in the migration approach presented herein.
 
 <image>
 
-# Capture existing configuration
+## 2.2. Good to consider
+
+If as part of your ExpressRoute migration project you are implementing more circuits, or adding resilience, make sure to consider the ExpressRoute Gateway SKU you are using. This should be fit for purpose and aligned with your resilience and performance goals. If you are scheduling maintenance windows to upgrade your circuit, now could be a good time to plan for Gateways changes if required. https://docs.microsoft.com/en-us/azure/expressroute/expressroute-about-virtual-network-gateways#aggthroughput
+
+
+
+## 2.3. Capture existing configuration
 
 Before removing the old connectivity, we should capture its logical configuration and form a baseline diagram to iterate from. Important information shown in the example diagram below includes;
 
@@ -84,11 +90,11 @@ Once this is complete, you should be able to produce some diagrams like the foll
 <image>
 <image>
 
-# Private Peering Migration
+# 3. Private Peering Migration
 
 ![](images/2021-08-04-23-26-45.png)
 
-## Create new ExpressRoute circuit
+## 3.1. Create new ExpressRoute circuit
 
 https://docs.microsoft.com/en-us/azure/expressroute/expressroute-howto-circuit-portal-resource-manager
 
@@ -96,7 +102,7 @@ Follow the above guide to create the new circuit with your requirement parameter
 
 <image>
 
-## Create test Virtual Network and link to circuit
+## 3.2. Create test Virtual Network and link to circuit
 
 https://docs.microsoft.com/en-us/azure/expressroute/expressroute-howto-linkvnet-arm
 
@@ -111,13 +117,13 @@ https://docs.microsoft.com/en-us/azure/expressroute/expressroute-howto-linkvnet-
 
 > Take this opportunity to become familiar with all the rich ExpressRoute information that is available from the CLI. For example, a good idea at this step is to verify you are advertising all the required routes from On-Premises with the expected AS-PATH manipulation, if any. A great guide to get started https://blog.cloudtrooper.net/2021/07/12/cli-based-analysis-of-an-expressroute-private-peering/
 
-## Pre-provision circuit authorizations
+## 3.3. Pre-provision circuit authorizations
 
 If you are using circuit authorizations for cross-subscription gateway attachment (you checked that already right? ;) ) Then you are able to deploy these ahead of time on the new circuit. Generate the new authorsations and they will remain in the "available" state until redeemed at the gateway level. One less job to do during the migration window itself. 
 
 ![](images/2021-08-04-13-24-58.png)
 
-## Configure BGP routing to favour existing circuit
+## 3.4. Configure BGP routing to favour existing circuit
 
 Before we attach our new circuit to the production ExpressRoute Gateway, we want to ensure that traffic only fails over to this circuit when _we_ decide, and not unexpectedly due to routing logic we may not understand. We want to do this to ensure that traffic to and from Azure remains symmetrical, this is especially important if On-Premises Firewalls are in use.
 
@@ -129,7 +135,7 @@ Before we attach our new circuit to the production ExpressRoute Gateway, we want
 
 More info: https://docs.microsoft.com/en-us/azure/expressroute/expressroute-optimize-routing
 
-## Configure BGP as-path-prepend on new circuit
+## 3.5. Configure BGP as-path-prepend on new circuit
 
 Now that we understand, and are in control of, the routing behaviour on the existing circuit, we can attach the new circuit to operate in a standby state. Part of this will be to use as-path-prepend when advertising in routes to Azure on the new circuit.
 
@@ -144,7 +150,7 @@ Here is an example of a circuit that is receiving as-path-prepended routes from 
 > Note! At this stage the circuit is still not connected to your ExpressRoute Gateway, but you have verified the route advertisements and attributes. 
 
 
-## Connect new circuit to existing ExpressRoute Gateway
+## 3.6. Connect new circuit to existing ExpressRoute Gateway
 
 At this point we have a high degree of confidence in the new circuit; we have proved end-to-end connectivity, we know the routes will be unfavorable thanks to as-path manipulation, and we can therefore move to the next stage of connecting the new circuit to the production Gateway and placing it in an effective standby state.
 
@@ -161,7 +167,7 @@ adam@Azure:~$ az network vnet-gateway list-learned-routes -n ER-GW-WE -g GBB-ER-
 
 We have completed 6 steps, and we still are yet to put any production traffic on our new ER circuit! So lets move on...
 
-## Move traffic to new ExpressRoute circuit
+## 3.7. Move traffic to new ExpressRoute circuit
 
 At this point you have two options;
 
@@ -175,7 +181,7 @@ Which approach you choose will depend on factors that include;
 - Are any On-Premises firewalls being used? Option (a) guarantees symmetrical traffic, whilst option (b) may result in temporary asymmetry due to BGP propagation timing
 - Appetite for downtime. Option (a), whilst simpler, does come with the guaranteed downtime whilst BGP re-converges. Option (b) is more complex, but may offer a more seamless cut-over experience
 
-## Rollback
+## 3.8. Rollback
 
 What if you've done the previous step and things are not working? Your app owners are still reporting problems after a period of UAT, and you need to press the "go back" button? 
 
@@ -183,11 +189,11 @@ What if you've done the previous step and things are not working? Your app owner
 
 - If you went with option (b), reverse your weight and as-path changes.
 
-## Cleanup
+## 3.9. Cleanup
 
 Once you are happy the migration was a success, don't forget to ask your provider to decommission your old ExpressRoute circuit, once this is complete you can delete the ExpressRoute object itself in the Azure portal.
 
-## Migrating multiple circuits
+## 3.10. Migrating multiple circuits
 
 Up to this point, and to keep the guidance clear, the discussion has been focused narrowly on a simple scenario of migrating one existing circuit to one new circuit.
 
@@ -197,7 +203,7 @@ If this is the case you can use the above logic in a staged approach. Migrating 
 
 <image>
 
-# Public/Microsoft Peering Migration
+# 4. Public/Microsoft Peering Migration
 
 ![](images/2021-08-04-23-28-33.png)
 
@@ -214,14 +220,15 @@ The process for migrating from Public Peering to Microsoft Peering is already we
 - When initially configured, you will receive no routes on the Microsoft Peering. Only when attaching a _route filter_ will you start to recieve prefixes from Microsoft. https://docs.microsoft.com/en-us/azure/expressroute/how-to-routefilter-portal. 
   - You can use this to your advantage, initially selecting only one obscure BGP community, to validate route advertisements are functioning. 
   - Once this is complete, you can then select the wider range of services (BGP communities) that you require. 
-  - This approach allows a controlled migration, on a per service basis if you desire, when combined with BGP attribute manipulation (as-path-prepend inbound, or local-preference).
+  - This approach allows a controlled migration, on a per service basis if you desire, when combined with BGP attribute manipulation (as-path-prepend inbound, or local-preference).-
+
   
-  # Further reading and useful links
+# 5. Further reading and useful links
 
-  https://docs.microsoft.com/en-us/azure/expressroute/designing-for-high-availability-with-expressroute
+https://docs.microsoft.com/en-us/azure/expressroute/designing-for-high-availability-with-expressroute
 
-  https://docs.microsoft.com/en-us/azure/expressroute/designing-for-disaster-recovery-with-expressroute-privatepeering#large-distributed-enterprise-network
+https://docs.microsoft.com/en-us/azure/expressroute/designing-for-disaster-recovery-with-expressroute-privatepeering#large-distributed-enterprise-network
 
-  https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs
+https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs
 
   
