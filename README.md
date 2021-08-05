@@ -178,7 +178,7 @@ Network            Origin    SourcePeer    AsPath                               
 
 ## 3.6. Move traffic to new ExpressRoute circuit
 
-Up to now we have been in the verification and test phase, but now its time to move production traffic on to our new circuit. At this point you have two options;
+Until now we have been in the verification and test phase, now its time to move production traffic on to our new circuit. At this point we have two options;
 
 - a) Delete the connection object that links your old circuit to your ExpressRoute Gateway. In effect forcing traffic to/from Azure over your new circuit. This will incur downtime whilst the logical network routing catches up; between 10s to ~240s depending on the configuration of your On-Premises network and existing ER circuit. The main toggle to speed this process up, is BFD. https://docs.microsoft.com/en-us/azure/expressroute/expressroute-bfd
 
