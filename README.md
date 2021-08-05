@@ -95,7 +95,10 @@ Before removing the old connectivity, we should capture its logical configuratio
 
 Once this is complete, you should be able to produce two diagrams similar to the below, splitting out the Private Peering and the Public/Microsoft Peering for clarity.
 
-<image>
+![](images/2021-08-05-14-57-21.png)
+![](images/2021-08-05-14-57-43.png)
+
+
 
 # 3. Private Peering Migration
 
@@ -113,16 +116,16 @@ Follow the above guide to create the new circuit with your requirement parameter
 
 https://docs.microsoft.com/en-us/azure/expressroute/expressroute-howto-linkvnet-arm
 
-- Create a new Virtual Network with some test IP address space that does not overlap with either your current On-Premises address space, or your existing Azure VNet(s) address space. 
-- Deploy both a Virtual Machine for testing, and an ExpressRoute Virtual Network Gateway. 
+- Create a new VNet with some test IP address space that does not overlap with either your current on-premises address space, or your existing Azure VNet(s) address space
+- Deploy, for testing purposes,  both a Virtual Machine and an ExpressRoute Virtual Network Gateway
 - Connect the test Gateway to your new circuit via a Connection object
 - The purposes of this step is to prove out end-to-end connectivity across the new circuit, prior to using it within your production environment. 
-- If done correctly, your On-Premises network can now route traffic to this new test VNet, and vice versa. 
-- Carry out your required commissioning tests, latency, throughput etc
+- If done correctly, your On-Premises network can now route traffic to this new test VNet, and vice versa 
+- Carry out part of your required commissioning tests, latency, throughput etc
 
-<image>
+![](images/2021-08-05-15-15-28.png)
 
-> Take this opportunity to become familiar with all the rich ExpressRoute information that is available from the CLI. For example, a good idea at this step is to verify you are advertising all the required routes from On-Premises with the expected AS-PATH manipulation, if any. A great guide to get started https://blog.cloudtrooper.net/2021/07/12/cli-based-analysis-of-an-expressroute-private-peering/
+> Take this opportunity to become familiar with all the rich ExpressRoute information that is available from the CLI. For example, a good idea at this step is to verify you are advertising all the required routes from On-Premises with the expected as-path manipulation, if any. A great guide to get started https://blog.cloudtrooper.net/2021/07/12/cli-based-analysis-of-an-expressroute-private-peering/
 
 ## 3.3. Pre-provision circuit authorizations
 
@@ -132,19 +135,23 @@ If you are using circuit authorizations for cross-subscription gateway attachmen
 
 ## 3.4. Configure BGP routing to favour existing circuit
 
-Before we attach our new circuit to the production ExpressRoute Gateway, we want to ensure that traffic only fails over to this circuit when _we_ decide, and not unexpectedly due to routing logic we may not understand. We want to do this to ensure that traffic to and from Azure remains symmetrical, this is especially important if On-Premises Firewalls are in use.
+Before we attach our new circuit to the production ExpressRoute Gateway, we want to ensure that traffic only fails over to this circuit when _we_ decide, and not unexpectedly due to routing logic we may have full visibility of. We want to do this to ensure that traffic to and from Azure remains symmetrical, this is especially important if On-Premises stateful firewalls are in use.
 
 - To control traffic from **Azure to On-Premises** the most straight forward method is to change the Weight parameter, configured at the Connection object level. The default is 0, a higher weight wins, therefore lets set our existing connection to 100.
 
 ![](images/2021-08-04-22-30-44.png)
 
-- To control traffic from **On-Premises to Azure** the most straight forward method is to use BGP as-path-prepend. For now, we can leave this at the default on the existing circuit (The default is assumed to be not using as-path-prepend), but we will need this later for the migration, so configure a route-map on your on-premises router than can be used later.
+- To control traffic from **On-Premises to Azure** the most straight forward method is to use BGP metric tuning - typically as-path-inbound, or local preference, depending on exact topology of your Customer edge routers. For now, we can leave these metrics at their default settings on the existing circuit, but we will need to modify these later in the migration, so configure a route-map on your on-premises router than can be used later.
+
+![](images/2021-08-05-15-31-02.png)
 
 More info: https://docs.microsoft.com/en-us/azure/expressroute/expressroute-optimize-routing
 
+
+
 ## 3.5. Configure BGP as-path-prepend on new circuit
 
-Now that we understand, and are in control of, the routing behaviour on the existing circuit, we can attach the new circuit to operate in a standby state. Part of this will be to use as-path-prepend when advertising in routes to Azure on the new circuit.
+Now that we understand, and are in control of, the routing behaviour on the existing circuit, we can attach the new circuit to operate in a standby state. The first part of this is to control the routing from 
 
 Complete this configuration on your edge device/router, and verify the received routes on the MSEE. You can do this using the CLI (see earlier section) or from within the Azure Portal. 
 
