@@ -8,6 +8,7 @@
 - [Contents](#contents)
 - [Introduction](#introduction)
 - [Context](#context)
+    - [Good to know](#good-to-know)
 - [Capture existing configuration](#capture-existing-configuration)
 - [Private Peering Migration](#private-peering-migration)
     - [Create new ExpressRoute circuit](#create-new-expressroute-circuit)
@@ -19,8 +20,8 @@
     - [Move traffic to new ExpressRoute circuit](#move-traffic-to-new-expressroute-circuit)
     - [Rollback](#rollback)
     - [Cleanup](#cleanup)
+    - [Migrating multiple circuits](#migrating-multiple-circuits)
 - [Public/Microsoft Peering Migration](#publicmicrosoft-peering-migration)
-- [Closing](#closing)
 
 <!-- /TOC -->
 
@@ -46,6 +47,12 @@ When having any ExpressRoute discussion its beneficial to agree on terms. This i
 - Circuit
 - Partner
 - Customer
+
+<image>
+
+## Good to know
+
+Up to ~2019 it was only possible to link a single ExpressRoute circuit from a Edge location to an ExpressRoute Gateway. I.e. you could link multiple circuits, but they had to be from different edge locations / PoPs. Now, we are able to simultaneously link up to 4 circuits from the same peering location to an ExpressRoute gateway. This gives us more flexibility in the migration approach presented herein.
 
 <image>
 
@@ -180,18 +187,41 @@ What if you've done the previous step and things are not working? Your app owner
 
 Once you are happy the migration was a success, don't forget to ask your provider to decommission your old ExpressRoute circuit, once this is complete you can delete the ExpressRoute object itself in the Azure portal.
 
-If like most customers you are only using the ExpressRoute Private Peering you can now stop, good job! If you have an existing Public or Microsoft peering to migrate as well, read on...
+## Migrating multiple circuits
+
+Up to this point, and to keep the guidance clear, the discussion has been focused narrowly on a simple scenario of migrating one existing circuit to one new circuit.
+
+However, you may have a requirement to complete the above steps for more than one circuit, for example you may already be using resilient circuits (deployed across multiple ER PoPs) https://docs.microsoft.com/en-us/azure/expressroute/designing-for-disaster-recovery-with-expressroute-privatepeering#large-distributed-enterprise-network. 
+
+If this is the case you can use the above logic in a staged approach. Migrating traffic away from your existing circuit-A, and then circuit-B, leaving circuit-C and circuit-D in operation. E.g.
+
+<image>
 
 # Public/Microsoft Peering Migration
 
 ![](images/2021-08-04-23-28-33.png)
 
-https://docs.microsoft.com/en-us/azure/expressroute/how-to-move-peering
+Public Peering is now deprecated but you may still be using this service on your old circuit. If you wish to retain access to Public IPs from Microsoft over your ExpressRoute connection, you will need to implement the Microsoft peering on your new circuit.
 
--
+> Note! Now is a good time to assess what you are using the existing Public or Microsoft peering for. Many customers find that with platform enhancements in recent years such as **Azure Private Link**, the requirement to utilise the Microsoft peering is greatly reduced.
 
-# Closing
+The process for migrating from Public Peering to Microsoft Peering is already well documented - https://docs.microsoft.com/en-us/azure/expressroute/how-to-move-peering - this methodology can be followed when implementing a new circuit.
 
-Despite this document not proposing an entirely elegant solution, I do hope it helps you approach the topic and understand the current options and constraints.
+:warning: Key call outs :warning:
 
-PS. Hat tip to new feature in the portal that can kick start your decision-making process in this area. https://docs.microsoft.com/en-us/azure/architecture/guide/technology-choices/load-balancing-overview#choose-a-load-balancing-solution-using-azure-portal
+- If you are moving from Public to Microsoft peering your SNAT IP addresses **will** change, therefore any IP allowed-lists (for example on Azure Storage firewall) will require updating prior to cutover.
+- To obtain your existing Microsoft SNAT IP addresses used on the Public Peering, raise an Azure support ticket
+- When initially configured, you will receive no routes on the Microsoft Peering. Only when attaching a _route filter_ will you start to recieve prefixes from Microsoft. https://docs.microsoft.com/en-us/azure/expressroute/how-to-routefilter-portal. 
+  - You can use this to your advantage, initially selecting only one obscure BGP community, to validate route advertisements are functioning. 
+  - Once this is complete, you can then select the wider range of services (BGP communities) that you require. 
+  - This approach allows a controlled migration, on a per service basis if you desire, when combined with BGP attribute manipulation (as-path-prepend inbound, or local-preference).
+  
+  # Further reading and useful links
+
+  https://docs.microsoft.com/en-us/azure/expressroute/designing-for-high-availability-with-expressroute
+
+  https://docs.microsoft.com/en-us/azure/expressroute/designing-for-disaster-recovery-with-expressroute-privatepeering#large-distributed-enterprise-network
+
+  https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs
+
+  
