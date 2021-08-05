@@ -23,7 +23,6 @@
 
 <!-- /TOC -->
 
-
 # 1. Introduction
 
 Many customers on Azure leverage ExpressRoute for reliable hybrid connectivity. Sometimes these same customers may need to implement a new ExpressRoute circuit, and have a desire to decommission their old circuit. Common drivers for this scenario include:
