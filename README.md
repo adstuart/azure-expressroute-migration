@@ -1,6 +1,6 @@
- # ExpressRoute migration guide
+  # ExpressRoute migration guide
 
- ## Contents
+  ## Contents
 
 <!-- TOC -->
 
@@ -18,11 +18,11 @@
     - [3.6. Move traffic to new ExpressRoute circuit](#36-move-traffic-to-new-expressroute-circuit)
     - [3.7. Rollback](#37-rollback)
     - [3.8. Cleanup](#38-cleanup)
-    - [3.9. Migrating multiple circuits](#39-migrating-multiple-circuits)
 - [4. Public/Microsoft Peering Migration](#4-publicmicrosoft-peering-migration)
 - [5. Further reading and useful links](#5-further-reading-and-useful-links)
 
 <!-- /TOC -->
+
 
 # 1. Introduction
 
@@ -44,7 +44,7 @@ When having any ExpressRoute discussion its beneficial to agree on terms. This i
 - **Gateway**; lives in the GatewaySubnet in your Virtual Network (VNet)
 - **Connection**; connects your **Gateway** to a
 - **Circuit**; the logical configuration at the Microsoft edge network, used to connect your network to ours. **Not** located in the Azure Region, lives in the Peering Exchange, aka Edge site, aka PoP. Owned by companies like NGN, Equinix and Telehouse.
-- **Partner**; The company helping you bridge the gap bewteen your network and Microosfts by faciliating, most commonly, a collection of virtual layer-2 circuits, which you connect to
+- **Partner**; The company helping you bridge the gap between your network and Microsoft's by facilitating, most commonly, a collection of virtual layer-2 circuits, which you connect to
 - **Customer**; Your devices, most often used for Layer-3 BGP termination.
 
 Customer/partner lines may blur, also [ExpressRoute Direct](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-erdirect-about) removes the Partner layer. 
@@ -76,7 +76,8 @@ Before removing the old connectivity, we should capture its logical configuratio
 - Which Azure regions are being used, E.g. West Europe
 - ExpressRoute Gateway [SKU](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-about-virtual-network-gateways#gwsku), e.g. _High_, or _ERGw1Az_ 
 - ExpressRoute connection objects (the things that link a _gateway_ to a _circuit_ within the same subscriptions)
-- ExpressRoute authorisations (the things that link a _gateway_ to a _circuit_ within a [different subscription](ttps://docs.microsoft.com/en-us/azure/expressroute/expressroute-howto-linkvnet-arm#circuit-owner-operations)) 
+- ExpressRoute 
+ (the things that link a _gateway_ to a _circuit_ within a [different subscription](ttps://docs.microsoft.com/en-us/azure/expressroute/expressroute-howto-linkvnet-arm#circuit-owner-operations)) 
 - ExpressRoute circuit attributes
   - Peering location, e.g. London1
   - Bandwidth, e.g. 1Gbps
@@ -142,19 +143,20 @@ Before we attach our new circuit to the production ExpressRoute Gateway, we want
 
 ![](images/2021-08-04-22-30-44.png)
 
-- An alternative method to control traffic from **Azure to On-Premises** is to use as-path-prepend from On-Premises in the direction of Azure - [full details](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-optimize-routing). Here is an example of a circuit that is receiving as-path-prepended routes from an On-Premises router. 
+- An alternative method to control traffic from **Azure to On-Premises** is to use as-path-
+ from On-Premises in the direction of Azure - [full details](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-optimize-routing). Here is an example of a circuit that is receiving as-path-prepended routes from an On-Premises router. 
 
 ![](images/2021-08-04-22-41-33.png)
 
 ![](images/2021-08-04-22-43-19.png)
 
-- To control traffic from **On-Premises to Azure** you will need to use BGP metric tuning - typically as-path-inbound, or local preference, depending on exact topology of your Customer edge routers. Configure a route-map on your on-premises router. Leverage this route-map to manipulate BGP metrics on routes recieved from Azure via the existing blue circuit. E.g. Configure your route-map to set Local Preference to 200. (Higher local pref wins, default is typically 100)
+- To control traffic from **On-Premises to Azure** you will need to use BGP metric tuning - typically as-path-inbound, or local preference, depending on exact topology of your Customer edge routers. Configure a route-map on your on-premises router. Leverage this route-map to manipulate BGP metrics on routes received from Azure via the existing blue circuit. E.g. Configure your route-map to set Local Preference to 200. (Higher local pref wins, default is typically 100)
 
 > Note! At this stage the circuit is still not connected to your ExpressRoute Gateway, but you have verified the route advertisements and attributes. 
 
 ## 3.5. Connect new circuit to existing ExpressRoute Gateway
 
-<imagme>
+![](images/2021-08-05-16-26-58.png)
 
 At this point we have a high degree of confidence in the new circuit; we have proved end-to-end connectivity and we understand, and are in control of, the routing behaviour on the existing circuit, we can attach the new circuit to operate in a **standby/passive state**.
 
@@ -180,37 +182,33 @@ Network            Origin    SourcePeer    AsPath                               
 
 Until now we have been in the verification and test phase, now its time to move production traffic on to our new circuit. At this point we have two options;
 
-- a) Delete the connection object that links your old circuit to your ExpressRoute Gateway. In effect forcing traffic to/from Azure over your new circuit. This will incur downtime whilst the logical network routing catches up; between 10s to ~240s depending on the configuration of your On-Premises network and existing ER circuit. The main toggle to speed this process up, is BFD. https://docs.microsoft.com/en-us/azure/expressroute/expressroute-bfd
+- a) Delete the connection object that links your old circuit to your ExpressRoute Gateway. In effect, forcing traffic to/from Azure over your new circuit. This will incur downtime whilst the logical network routing catches up; between 10s to ~240s depending on the configuration of your On-Premises network, existing ER circuit and if you are using [BFD](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-bfd) or not. 
 
-- b) Modify weight and AS-path to preference the new circuit. By repeating the process used above to de-preference the new circuit, we can use the same tools to de-preference the old circuit. I.e. we set Weight to 200 on the connection object to our new circuit, and in parallel change our On-Premises route-maps to as-path-prepend on the existing ER circuit, and remove this from the new circuit. In my testing this approach can result in a more seamless failover and less downtime, but your mileage may vary, depending on your On-Premises network setup.
+![](images/2021-08-05-16-30-04.png)
 
-Which approach you choose will depend on factors that include;
+- b) Modify BGP metrics to preference the new circuit,  using the logic from step 3.4 to de-preference the old circuit. E.g. we set Weight to 200 on the connection object and, in parallel, change our On-Premises route-maps to prefer the new circuit. _In my testing this approach can result in a more seamless failover and less downtime, but your mileage may vary, depending on your On-Premises network setup._
 
-- Who is driving the migration? I would suggest that you always need your On-Premises network team on standby, but option (a) allows the cut-over to be initiated entirely from Azure.
+![](images/2021-08-05-16-34-48.png)
+
+Which approach you choose will depend on factors such as;
+
+- Who is driving the migration? I would suggest that you always need your On-Premises network team involved in the migration process, but option (a) allows the cut-over to be initiated entirely from Azure.
 - Are any On-Premises firewalls being used? Option (a) guarantees symmetrical traffic, whilst option (b) may result in temporary asymmetry due to BGP propagation timing
 - Appetite for downtime. Option (a), whilst simpler, does come with the guaranteed downtime whilst BGP re-converges. Option (b) is more complex, but may offer a more seamless cut-over experience
 
 ## 3.7. Rollback
 
-What if you've done the previous step and things are not working? Your app owners are still reporting problems after a period of UAT, and you need to press the "go back" button? 
+What if things are not working? Your app owners are still reporting problems after a period of UAT, and you need to press the _go back_ button? 
 
 - If you went with option (a), reconnect the old circuit by re-creating a connection object that links the old circuit to the ExpressRoute gateway.
 
-- If you went with option (b), reverse your weight and as-path changes.
+- If you went with option (b), reverse your weight and as-path metric changes.
 
 ## 3.8. Cleanup
 
 Once you are happy the migration was a success, don't forget to ask your provider to decommission your old ExpressRoute circuit, once this is complete you can delete the ExpressRoute object itself in the Azure portal. You can also remove the test VNet and associated resources.
 
-## 3.9. Migrating multiple circuits
-
-Up to this point, and to keep the guidance clear, the discussion has been focused narrowly on a simple scenario of migrating one existing circuit to one new circuit.
-
-However, you may have a requirement to complete the above steps for more than one circuit, for example you may already be using resilient circuits (deployed across multiple ER PoPs) https://docs.microsoft.com/en-us/azure/expressroute/designing-for-disaster-recovery-with-expressroute-privatepeering#large-distributed-enterprise-network. 
-
-If this is the case you can use the above logic in a staged approach. Migrating traffic away from your existing circuit-A, and then circuit-B, leaving circuit-C and circuit-D in operation. E.g.
-
-<image>
+![](images/2021-08-05-16-38-06.png)
 
 # 4. Public/Microsoft Peering Migration
 
@@ -220,13 +218,13 @@ Public Peering is now deprecated but you may still be using this service on your
 
 > Note! Now is a good time to assess what you are using the existing Public or Microsoft peering for. Many customers find that with platform enhancements in recent years such as **Azure Private Link**, the requirement to utilise the Microsoft peering is greatly reduced.
 
-The process for migrating from Public Peering to Microsoft Peering is already well documented - https://docs.microsoft.com/en-us/azure/expressroute/how-to-move-peering - this methodology can be followed when implementing a new circuit.
+The process for migrating from Public Peering to Microsoft Peering is already well documented - https://docs.microsoft.com/en-us/azure/expressroute/how-to-move-peering - this methodology can be followed when implementing a new circuit, therefore there is no need to repeat the guidance here.
 
-:warning: Key call outs :warning:
+:warning: Key call outs
 
-- If you are moving from Public to Microsoft peering your SNAT IP addresses **will** change, therefore any IP allowed-lists (for example on Azure Storage firewall) will require updating prior to cutover.
-- To obtain your existing Microsoft SNAT IP addresses used on the Public Peering, raise an Azure support ticket
-- When initially configured, you will receive no routes on the Microsoft Peering. Only when attaching a _route filter_ will you start to recieve prefixes from Microsoft. https://docs.microsoft.com/en-us/azure/expressroute/how-to-routefilter-portal. 
+- If you are moving from Public to Microsoft peering your SNAT IP addresses **will** change, therefore any IP allowed-lists (for example on Azure Storage firewall) will require updating prior to cut-over.
+  - To obtain your existing Microsoft SNAT IP addresses used on the Public Peering, raise an Azure support ticket
+- When initially configured, you will receive no routes on the Microsoft Peering. Only when attaching a _route filter_ will you start to receive prefixes from Microsoft. https://docs.microsoft.com/en-us/azure/expressroute/how-to-routefilter-portal. 
   - You can use this to your advantage, initially selecting only one obscure BGP community, to validate route advertisements are functioning. 
   - Once this is complete, you can then select the wider range of services (BGP communities) that you require. 
   - This approach allows a controlled migration, on a per service basis if you desire, when combined with BGP attribute manipulation (as-path-prepend inbound, or local-preference).-
