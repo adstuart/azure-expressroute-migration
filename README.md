@@ -16,10 +16,11 @@
     - [3.4. Configure BGP routing to favour existing circuit](#34-configure-bgp-routing-to-favour-existing-circuit)
     - [3.5. Connect new circuit to existing ExpressRoute Gateway](#35-connect-new-circuit-to-existing-expressroute-gateway)
     - [3.6. Move traffic to new ExpressRoute circuit](#36-move-traffic-to-new-expressroute-circuit)
-    - [3.7. Rollback](#37-rollback)
-    - [3.8. Cleanup](#38-cleanup)
+    - [3.7. Validate](#37-validate)
+    - [3.8. Rollback](#38-rollback)
+    - [3.9. Cleanup](#39-cleanup)
 - [4. Public/Microsoft Peering Migration](#4-publicmicrosoft-peering-migration)
-- [5. Further reading and useful links](#5-further-reading-and-useful-links)
+- [5. Further reading](#5-further-reading)
 
 <!-- /TOC -->
 
@@ -195,7 +196,23 @@ Which approach you choose will depend on factors such as;
 - Are any On-Premises firewalls being used? Option (a) guarantees symmetrical traffic, whilst option (b) may result in temporary asymmetry due to BGP propagation timing
 - Appetite for downtime. Option (a), whilst simpler, does come with the guaranteed downtime whilst BGP re-converges. Option (b) is more complex, but may offer a more seamless cut-over experience
 
-## 3.7. Rollback
+## 3.7. Validate
+
+You when with option (a) or (b) above, you think everything appears to be working, how can we rubber stamp this and consider the migration a success?
+
+- To verify traffic from **Azure to On-Premises** is using the correct path
+  - From the ExpressRoute Gateway, you can re-run the command from earlier (`az network vnet-gateway list-learned-routes -n <gatewayname> -g <rg> -o table`) and verify that the preferred route (via weight, or as-path) has now flipped over to your other circuit.
+
+- To verify traffic from **On-Premises to Azure**  is using the correct path
+  - Check your customer edge device, run the (for Cisco folks, or equivilent) of `show ip bgp <azure vnet prefix>`, the best path should represent the next-hop of your new circuit peerings IP addressing
+
+Corroborate the above by checking the ExpressRoute circuit metrics in Azure Monitor, this can be accessed right from the _metrics_ blade in the portal. You should see traffic drop off your old circuit, and ramp up on your new circuit. In the below screenshot I have applied two metrics (bits-in and bits-out) along with splitting to force peering-type=private, finally I set time-range to _last 30 minutes_.
+
+![](images/2021-08-05-23-07-35.png)
+
+Now might also be a good time to solidify your investment of time in Monitoring for your shiney new ExpressRoute circuit, take a look at the new [Connection Monitor](https://docs.microsoft.com/en-us/azure/expressroute/how-to-configure-connection-monitor) experience, superseding [Network Performance Monitor](https://docs.microsoft.com/en-us/azure/expressroute/how-to-npm) going forward.
+
+## 3.8. Rollback
 
 What if things are not working? Your app owners are still reporting problems after a period of UAT, and you need to press the _go back_ button? 
 
@@ -203,7 +220,7 @@ What if things are not working? Your app owners are still reporting problems aft
 
 - If you went with option (b), reverse your weight and as-path metric changes.
 
-## 3.8. Cleanup
+## 3.9. Cleanup
 
 Once you are happy the migration was a success, don't forget to ask your provider to decommission your old ExpressRoute circuit, once this is complete you can delete the ExpressRoute object itself in the Azure portal. You can also remove the test VNet and associated resources.
 
@@ -229,12 +246,12 @@ The process for migrating from Public Peering to Microsoft Peering is already we
   - This approach allows a controlled migration, on a per service basis if you desire, when combined with BGP attribute manipulation (as-path-prepend inbound, or local-preference).-
 
   
-# 5. Further reading and useful links
+# 5. Further reading 
 
-https://docs.microsoft.com/en-us/azure/expressroute/designing-for-high-availability-with-expressroute
+- https://docs.microsoft.com/en-us/azure/expressroute/designing-for-high-availability-with-expressroute
 
-https://docs.microsoft.com/en-us/azure/expressroute/designing-for-disaster-recovery-with-expressroute-privatepeering#large-distributed-enterprise-network
+- https://docs.microsoft.com/en-us/azure/expressroute/designing-for-disaster-recovery-with-expressroute-privatepeering#large-distributed-enterprise-network
 
-https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs
+- https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs
 
   
