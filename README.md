@@ -72,12 +72,12 @@ A common ExpressRoute anti-pattern (don't do this :) ):
 
 ## 2.3. Capture existing configuration
 
-Before removing the old connectivity, we should capture its logical configuration and form a baseline diagram to iterate from. Important information shown in the example diagram below includes;
+Before removing the old connectivity, we should capture its logical configuration and form a baseline diagram to iterate from. Important information includes;
 
 - Which Azure regions are being used, E.g. West Europe
-- ExpressRoute Gateway SKU, e.g. "high", or "ERGw1Az" https://docs.microsoft.com/en-us/azure/expressroute/expressroute-about-virtual-network-gateways#gwsku
+- ExpressRoute Gateway [SKU](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-about-virtual-network-gateways#gwsku), e.g. _High_, or _ERGw1Az_ 
 - ExpressRoute connection objects (the things that link a _gateway_ to a _circuit_ within the same subscriptions)
-- ExpressRoute authorisations (the things that link a _gateway_ to a _circuit_ within a different subscription) https://docs.microsoft.com/en-us/azure/expressroute/expressroute-howto-linkvnet-arm#circuit-owner-operations
+- ExpressRoute authorisations (the things that link a _gateway_ to a _circuit_ within a [different subscription](ttps://docs.microsoft.com/en-us/azure/expressroute/expressroute-howto-linkvnet-arm#circuit-owner-operations)) 
 - ExpressRoute circuit attributes
   - Peering location, e.g. London1
   - Bandwidth, e.g. 1Gbps
@@ -87,15 +87,14 @@ Before removing the old connectivity, we should capture its logical configuratio
 - ExpressRoute circuit peering types
   - Private peering *(the majority of customers will only be using this peering type)*
   - Public Peering (now deprecated, but may still be in use in your network)
-    - Public Peering utilises Microsoft managed SNAT ranges. You will need to raise a support ticket to find out your SNAT address. https://docs.microsoft.com/en-us/azure/expressroute/expressroute-nat#nat-requirements-for-azure-public-peering
+    - Public Peering utilises Microsoft managed SNAT ranges. If you do not know this [SNAT information](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-nat#nat-requirements-for-azure-public-peering), you will need to raise an Azure support ticket to find out your SNAT addresses 
   - Microsoft Peering
-    - Microsoft peering utilises customer managed SNAT, you or your provider will have this information. https://docs.microsoft.com/en-us/azure/expressroute/expressroute-nat#nat-requirements-for-microsoft-peering
-    - Route filters associated with Microsoft peering https://docs.microsoft.com/en-us/azure/expressroute/how-to-routefilter-portal
-- BGP AS numbers and /30 peer IP addresses for all peerings https://docs.microsoft.com/en-us/azure/expressroute/expressroute-routing
+    - Microsoft peering utilises [customer managed SNAT](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-nat#nat-requirements-for-microsoft-peering), you or your provider will have this information. 
+    - [Route filters](https://docs.microsoft.com/en-us/azure/expressroute/how-to-routefilter-portal) associated with Microsoft peering 
+- [BGP information](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-routing) -  AS numbers and /30 peer IP addresses for all peerings 
 
-Once this is complete, you should be able to produce some diagrams like the following examples, I have split out the Private Peering and the Public Peering in to separate diagrams for clarity. The remainder of the document will follow this structure, as these peering types have marked different considerations.
+Once this is complete, you should be able to produce two diagrams similar to the below, splitting out the Private Peering and the Public/Microsoft Peering for clarity.
 
-<image>
 <image>
 
 # 3. Private Peering Migration
@@ -172,8 +171,9 @@ adam@Azure:~$ az network vnet-gateway list-learned-routes -n ER-GW-WE -g GBB-ER-
 192.168.2.0/24     EBgp      10.10.1.5     12076-65000-65001-65001-65001-65002  32769     10.10.1.5
 192.168.2.0/24     EBgp      10.10.1.4     12076-65000-65001-65001-65001-65002  32769     10.10.1.4
 ```
+Now is the time to also redeem the authorsations you created in an earlier step, effectively building connections from your circuit to gateways that reside in different subscriptions.
 
-We have completed 6 steps, and we still are yet to put any production traffic on our new ER circuit! So lets move on...
+We have now completed 6 steps, and we still are yet to put any production traffic on our new ER circuit! So lets move on...
 
 ## 3.7. Move traffic to new ExpressRoute circuit
 
