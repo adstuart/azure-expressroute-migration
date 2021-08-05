@@ -150,7 +150,7 @@ Before we attach our new circuit to the production ExpressRoute Gateway, we want
 
 ![](images/2021-08-04-22-43-19.png)
 
-- To control traffic from **On-Premises to Azure** you will need to use BGP metric tuning - typically as-path-inbound, or local preference, depending on exact topology of your Customer edge routers. Configure a route-map on your on-premises router. Leverage this route-map to manipulate BGP metrics on routes received from Azure via the existing blue circuit. E.g. Configure your route-map to set Local Preference to 200. (Higher local pref wins, default is typically 100)
+- To control traffic from **On-Premises to Azure** you will need to use BGP metric tuning - typically as-path-inbound, or local preference, depending on exact topology of your Customer edge routers. Configure a route-map on your on-premises router. Leverage this route-map to manipulate BGP metrics on routes received from Azure via the existing blue circuit. E.g. Configure your route-map to set Local Preference to 200. (Higher local pref wins, default is typically 100).
 
 > Note! At this stage the circuit is still not connected to your ExpressRoute Gateway, but you have verified the route advertisements and attributes. 
 
@@ -204,7 +204,7 @@ You when with option (a) or (b) above, you think everything appears to be workin
   - From the ExpressRoute Gateway, you can re-run the command from earlier (`az network vnet-gateway list-learned-routes -n <gatewayname> -g <rg> -o table`) and verify that the preferred route (via weight, or as-path) has now flipped over to your other circuit.
 
 - To verify traffic from **On-Premises to Azure**  is using the correct path
-  - Check your customer edge device, run the (for Cisco folks, or equivalent) of `show ip bgp <azure vnet prefix>`, the best path should represent the next-hop of your new circuit peerings IP addressing
+  - Check your customer edge device, run the (for Cisco folks, or equivalent) of `show ip bgp <azure vnet prefix>`, the best path should represent the next-hop of your new circuit peerings IP addressing.
 
 Corroborate the above by checking the ExpressRoute circuit metrics in Azure Monitor, this can be accessed right from the _metrics_ blade in the portal. You should see traffic drop off your old circuit, and ramp up on your new circuit. In the below screenshot I have applied two metrics (bits-in and bits-out) along with splitting to force peering-type=private, finally I set time-range to _last 30 minutes_.
 
@@ -216,9 +216,9 @@ Now might also be a good time to solidify your investment of time in Monitoring 
 
 What if things are not working? Your app owners are still reporting problems after a period of UAT, and you need to press the _go back_ button? 
 
-- If you went with option (a), reconnect the old circuit by re-creating a connection object that links the old circuit to the ExpressRoute gateway.
+- If you went with option (a), reconnect the old circuit by re-creating a connection object that links the old circuit to the ExpressRoute gateway
 
-- If you went with option (b), reverse your weight and as-path metric changes.
+- If you went with option (b), reverse your weight and as-path metric changes
 
 ## 3.9. Cleanup
 
@@ -243,7 +243,7 @@ The process for migrating from Public Peering to Microsoft Peering is already we
 - When initially configured, you will receive no routes on the Microsoft Peering. Only when attaching a _route filter_ will you start to receive prefixes from Microsoft. https://docs.microsoft.com/en-us/azure/expressroute/how-to-routefilter-portal. 
   - You can use this to your advantage, initially selecting only one obscure BGP community, to validate route advertisements are functioning. 
   - Once this is complete, you can then select the wider range of services (BGP communities) that you require. 
-  - This approach allows a controlled migration, on a per service basis if you desire, when combined with BGP attribute manipulation (as-path-prepend inbound, or local-preference).-
+  - This approach allows a controlled migration, on a per service basis if you desire, when combined with BGP attribute manipulation (as-path-prepend inbound, or local-preference).
 
   
 # 5. Further reading 
