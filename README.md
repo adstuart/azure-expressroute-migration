@@ -43,7 +43,7 @@ When having any ExpressRoute discussion its beneficial to agree on terms. This i
 
 - **Gateway**; lives in the GatewaySubnet in your Virtual Network (VNet)
 - **Connection**; connects your **Gateway** to a
-- **Circuit**; the logical configuration at the Microsoft edge network, used to connect your network to ours. **Not** located in the Azure Region, lives in the Peering Exchange, aka Edge site, aka PoP. Owned by companies like NGN, Equinix and Telehouse.
+- **Circuit**; the logical configuration at the Microsoft edge network, used to connect your network to ours. **Not located in the Azure Region**, lives in the Peering Exchange, aka Edge site, aka PoP. Owned by companies like NGN, Equinix and Telehouse.
 - **Partner**; The company helping you bridge the gap between your network and Microsoft's by facilitating, most commonly, a collection of virtual layer-2 circuits, which you connect to
 - **Customer**; Your devices, most often used for Layer-3 BGP termination.
 
@@ -67,7 +67,7 @@ If, as part of your ExpressRoute migration project, you are implementing more ci
 
 Do also pay close attention to platform limits associated with number of connections/authorisations [per circuit](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs#vnetpercircuit), and number of [circuits per gateway](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-about-virtual-network-gateways#gatewayfeaturesupport). 
 
-A common ExpressRoute anti-pattern (don't do this :) ):
+A common ExpressRoute anti-pattern (don't do this :) ); in the diagram below, an outage affecting a single Availability Zone in the Azure region has the possibility of taking your entire Hybrid Connection offline (due to all instances of the Gateway becoming unavailable, if they happen to reside on the AZ having issues). This would clearly work against your overall strategy of leveraging Availability Zones for your applications and data.
 
 ![](images/2021-08-05-13-53-21.png)
 
