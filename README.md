@@ -30,7 +30,7 @@ Many customers on Azure leverage ExpressRoute for reliable hybrid connectivity. 
 
 - Mergers and acquisitions resulting in consolidation of network providers
 - A change of ExpressRoute provider or incumbent WAN provider
-- [Downgrading an ER circuit bandwidth requires a new circuit](https://docs.microsoft.com/en-us/azure/expressroute/)expressroute-faqs#can-i-change-the-bandwidth-of-an-expressroute-circuit
+- [Downgrading an ER circuit bandwidth requires a new circuit](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs#can-i-change-the-bandwidth-of-an-expressroute-circuit)
 - Upgrading an ER circuit can [sometimes](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs#can-i-change-the-bandwidth-of-an-expressroute-circuit) require a new circuit, depending if the existing underlying port has capacity to support the bandwidth increase 
 
 This guides suggest an approach to this migration process that focuses on seamless failover, de-risking rollback, and understanding the correct ordering of steps. Each step will require you to leverage your existing knowledge of ExpressRoute, links will be provided to Azure documentation as required for further technical depth. 
@@ -65,6 +65,8 @@ I.e. the following _is_ now [possible](https://docs.microsoft.com/en-us/azure/ex
 
 If, as part of your ExpressRoute migration project, you are implementing more circuits for resilience, make sure to also consider the [ExpressRoute Gateway SKU](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-about-virtual-network-gateways) you are using. This should be fit for purpose and aligned with your resilience and performance goals. If you are scheduling maintenance windows to upgrade your circuit, now could be a good time to plan for Gateways changes, if they are required. 
 
+Do also pay close attention to platform limits associated with number of connections/authorisations [per circuit](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs#vnetpercircuit), and number of [circuits per gateway](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-about-virtual-network-gateways#gatewayfeaturesupport). 
+
 A common ExpressRoute anti-pattern (don't do this :) ):
 
 ![](images/2021-08-05-13-53-21.png)
@@ -96,7 +98,7 @@ Before removing the old connectivity, we should capture its logical configuratio
 Once this is complete, you should be able to produce two diagrams similar to the below, splitting out the Private Peering and the Public/Microsoft Peering for clarity.
 
 ![](images/2021-08-05-14-57-21.png)
-![](images/2021-08-05-14-57-43.png)
+![](images/2021-08-06-09-50-06.png)
 
 
 # 3. Private Peering Migration
@@ -241,6 +243,8 @@ The process for migrating from Public Peering to Microsoft Peering is already we
   - You can use this to your advantage, initially selecting only one obscure BGP community, to validate route advertisements are functioning. 
   - Once this is complete, you can then select the wider range of services (BGP communities) that you require. 
   - This approach allows a controlled migration, on a per service basis if you desire, when combined with BGP attribute manipulation (as-path-prepend inbound, or local-preference).
+- If your current Public/Microsoft peering is authorised for use of M365, ensure to consider this moving forward. Take this opportunity to [question if you still need to send M365 traffic over ExpressRoute](https://www.microsoft.com/en-us/download/details.aspx?id=102899)? Authorisation to utilise this pattern is done on a per Azure subscription basis, therefore if your new circuits will reside in a new subscription, you will have to repeat the approval request.
+
 
 # 5. Further reading 
 
