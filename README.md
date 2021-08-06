@@ -99,7 +99,6 @@ Once this is complete, you should be able to produce two diagrams similar to the
 ![](images/2021-08-05-14-57-43.png)
 
 
-
 # 3. Private Peering Migration
 
 ![](images/2021-08-04-23-26-45.png)
@@ -122,8 +121,6 @@ Follow the above guide to create the new circuit with your requirement parameter
 - The purposes of this step is to prove out end-to-end connectivity across the new circuit, prior to using it within your production environment. 
 - If done correctly, your On-Premises network can now route traffic to this new test VNet, and vice versa 
 - Carry out part of your required commissioning tests, latency, throughput etc
-
-
 
 > Take this opportunity to become familiar with all the rich ExpressRoute information that is available from the CLI. For example, a good idea at this step is to verify you are advertising all the required routes from On-Premises with the expected as-path manipulation, if any. A great guide to get started https://blog.cloudtrooper.net/2021/07/12/cli-based-analysis-of-an-expressroute-private-peering/
 
@@ -245,7 +242,6 @@ The process for migrating from Public Peering to Microsoft Peering is already we
   - Once this is complete, you can then select the wider range of services (BGP communities) that you require. 
   - This approach allows a controlled migration, on a per service basis if you desire, when combined with BGP attribute manipulation (as-path-prepend inbound, or local-preference).
 
-  
 # 5. Further reading 
 
 - https://docs.microsoft.com/en-us/azure/expressroute/designing-for-high-availability-with-expressroute
