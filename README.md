@@ -67,9 +67,11 @@ If, as part of your ExpressRoute migration project, you are implementing more ci
 
 Do also pay close attention to platform limits associated with number of connections/authorisations [per circuit](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs#vnetpercircuit), and number of [circuits per gateway](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-about-virtual-network-gateways#gatewayfeaturesupport). 
 
-A common ExpressRoute anti-pattern (don't do this :) ); in the diagram below, an outage affecting a single Availability Zone in the Azure region has the possibility of taking your entire Hybrid Connection offline (due to all instances of the Gateway becoming unavailable, if they happen to reside on the AZ having issues). This would clearly work against your overall strategy of leveraging Availability Zones for your applications and data.
+A common ExpressRoute anti-pattern (don't do this ;) ); in the diagram below, an outage affecting a single Availability Zone in the Azure region has the possibility of taking your entire Hybrid Connection offline (due to all instances of the Gateway becoming unavailable, if they happen to reside in the AZ having issues). This would clearly work against your overall strategy of leveraging Availability Zones for your applications and data.
 
 ![](images/2021-08-05-13-53-21.png)
+
+In the diagram above we would recommend moving to the _ErGw3Az_ SKU; offering the same throughput capabilities as the _Ultra Performance_ SKU, but with the added benefit of AZ resilience.
 
 ## 2.3. Capture existing configuration
 
