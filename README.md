@@ -153,7 +153,7 @@ Before we attach our new circuit to the production ExpressRoute Gateway, we want
 
 - To control traffic from **On-Premises to Azure** you will need to use BGP metric tuning - typically as-path-inbound, or local preference, depending on exact topology of your Customer edge routers. Configure a route-map on your on-premises router. Leverage this route-map to manipulate BGP metrics on routes received from Azure via the existing blue circuit. E.g. Configure your route-map to set Local Preference to 200. (Higher local pref wins, default is typically 100).
 
-> Note! At this stage the circuit is still not connected to your ExpressRoute Gateway, but you have verified the route advertisements and attributes. 
+> Note! At this stage the circuit is still not connected to your existing/production ExpressRoute Gateway, but you have verified the route advertisements and attributes. 
 
 ## 3.5. Connect new circuit to existing ExpressRoute Gateway
 
