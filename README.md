@@ -106,7 +106,7 @@ Once this is complete, you should be able to produce two diagrams similar to the
 
 # 3. Private Peering Migration
 
-![](images/2021-08-04-23-26-45.png)
+![](images/2021-08-09-13-11-13.png)
 
 ## 3.1. Create new ExpressRoute circuit
 
@@ -227,7 +227,7 @@ Once you are happy the migration was a success, don't forget to ask your provide
 
 # 4. Public/Microsoft Peering Migration
 
-![](images/2021-08-04-23-28-33.png)
+![](images/2021-08-09-13-11-45.png)
 
 Public Peering is now deprecated but you may still be using this service on your old circuit. If you wish to retain access to Public IPs from Microsoft over your ExpressRoute connection, you will need to implement the Microsoft peering on your new circuit.
 
