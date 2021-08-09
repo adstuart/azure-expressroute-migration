@@ -29,25 +29,26 @@
 Many customers on Azure leverage ExpressRoute for reliable hybrid connectivity. Sometimes these same customers may need to implement a new ExpressRoute circuit, and have a desire to decommission their old circuit. Common drivers for this scenario include:
 
 - Mergers and acquisitions resulting in consolidation of network providers
+- Moving an ExpressRoute circuit from one Azure subscription to [another Azure subscription](https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/move-support-resources#microsoftnetwork)
 - A change of ExpressRoute provider or incumbent WAN provider
 - [Downgrading an ER circuit bandwidth requires a new circuit](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs#can-i-change-the-bandwidth-of-an-expressroute-circuit)
 - Upgrading an ER circuit can [sometimes](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs#can-i-change-the-bandwidth-of-an-expressroute-circuit) require a new circuit, depending if the existing underlying port has capacity to support the bandwidth increase 
 
 This guides suggest an approach to this migration process that focuses on seamless failover, de-risking rollback, and understanding the correct ordering of steps. Each step will require you to leverage your existing knowledge of ExpressRoute, links will be provided to Azure documentation as required for further technical depth. 
 
-:warning: This document assumes pre-existing knowledge of Azure, ExpressRoute and BGP. It is not designed to be read in isolation, but rather act as a high level guide, pointing you in the right direction, at the right places and get the project team asking the right questions to plan for success.
+> :warning: This document assumes pre-existing knowledge of Azure, ExpressRoute and BGP. It is not designed to be read in isolation, but rather act as a high level guide, pointing you in the right direction, at the right places and get the project team asking the right questions to plan for success.
 
 # 2. Context
 
 When having any ExpressRoute discussion its beneficial to agree on terms. This is best visualized in layers, highlighting the different components in any ExpressRoute design; 
 
 - **Gateway**; lives in the GatewaySubnet in your Virtual Network (VNet)
-- **Connection**; connects your **Gateway** to a
+- **Connection**; connects your **Gateway** to a Circuit.
 - **Circuit**; the logical configuration at the Microsoft edge network, used to connect your network to ours. **Not located in the Azure Region**, lives in the Peering Exchange, aka Edge site, aka PoP. Owned by companies like NGN, Equinix and Telehouse.
-- **Partner**; The company helping you bridge the gap between your network and Microsoft's by facilitating, most commonly, a collection of virtual layer-2 circuits, which you connect to
+- **Partner**; The company helping you bridge the gap between your network and Microsoft's by facilitating, most commonly, a collection of virtual layer-2 circuits, which you connect to your Customer network equipment.
 - **Customer**; Your devices, most often used for Layer-3 BGP termination.
 
-Customer/partner lines may blur, also [ExpressRoute Direct](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-erdirect-about) removes the Partner layer. 
+> Customer/partner lines may blur, also [ExpressRoute Direct](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-erdirect-about) removes the Partner layer. 
 
 ![](images/2021-08-05-12-57-52.png)
 
@@ -67,7 +68,7 @@ If, as part of your ExpressRoute migration project, you are implementing more ci
 
 Do also pay close attention to platform limits associated with number of connections/authorisations [per circuit](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs#vnetpercircuit), and number of [circuits per gateway](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-about-virtual-network-gateways#gatewayfeaturesupport). 
 
-A common ExpressRoute anti-pattern (don't do this ;) ); in the diagram below, an outage affecting a single Availability Zone in the Azure region has the possibility of taking your entire Hybrid Connection offline (due to all instances of the Gateway becoming unavailable, if they happen to reside in the AZ having issues). This would clearly work against your overall strategy of leveraging Availability Zones for your applications and data.
+A common ExpressRoute anti-pattern (don't do this :grinning: ); in the diagram below, an outage affecting a single Availability Zone in the Azure region has the possibility of taking your entire Hybrid Connection offline (due to all instances of the Gateway becoming unavailable, if they happen to reside in the AZ having issues). This would clearly work against your overall strategy of leveraging Availability Zones for your applications and data.
 
 ![](images/2021-08-05-13-53-21.png)
 
@@ -80,7 +81,7 @@ Before removing the old connectivity, we should capture its logical configuratio
 - Which Azure regions are being used, E.g. West Europe
 - ExpressRoute Gateway [SKU](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-about-virtual-network-gateways#gwsku), e.g. _High_, or _ERGw1Az_ 
 - ExpressRoute connection objects (the things that link a _gateway_ to a _circuit_ within the same subscriptions)
-- ExpressRoute 
+- ExpressRoute authorisations
  (the things that link a _gateway_ to a _circuit_ within a [different subscription](ttps://docs.microsoft.com/en-us/azure/expressroute/expressroute-howto-linkvnet-arm#circuit-owner-operations)) 
 - ExpressRoute circuit attributes
   - Peering location, e.g. London1
@@ -109,11 +110,9 @@ Once this is complete, you should be able to produce two diagrams similar to the
 
 ## 3.1. Create new ExpressRoute circuit
 
-https://docs.microsoft.com/en-us/azure/expressroute/expressroute-howto-circuit-portal-resource-manager
+![](images/2021-08-09-12-54-38.png)
 
-Follow the above guide to create the new circuit with your requirement parameters. This includes working with your provider to turn-up the new circuit and configure the BGP peerings to your network. The /30 BGP links will utilise new, unique IP addressing.
-
-<image>
+Follow [this](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-howto-circuit-portal-resource-manager) guide to create the new circuit with your requirement parameters. This includes working with your provider to turn-up the new circuit and configure the BGP peerings to your network. The /30 BGP links will utilise new, unique IP addressing. You may also decide to deploy the ExpressRoute circuit and remaining configurations via alternative methods such as PowerShell, [Azure CLI](https://docs.microsoft.com/en-us/azure/expressroute/howto-circuit-cli) or Bicep, Terraform, REST etc.
 
 ## 3.2. Create test Virtual Network and link to circuit
 
@@ -126,11 +125,11 @@ Follow the above guide to create the new circuit with your requirement parameter
 - If done correctly, your On-Premises network can now route traffic to this new test VNet, and vice versa 
 - Carry out part of your required commissioning tests, latency, throughput etc
 
-> Take this opportunity to become familiar with all the rich ExpressRoute information that is available from the CLI. For example, a good idea at this step is to verify you are advertising all the required routes from On-Premises with the expected as-path manipulation, if any. A great guide to get started https://blog.cloudtrooper.net/2021/07/12/cli-based-analysis-of-an-expressroute-private-peering/
+> Take this opportunity to become familiar with all the rich ExpressRoute information that is available from the CLI. For example, a good idea at this step is to verify you are advertising all the required routes from On-Premises with the expected AS-PATH manipulation, if any. A great guide to get started https://blog.cloudtrooper.net/2021/07/12/cli-based-analysis-of-an-expressroute-private-peering/
 
 ## 3.3. Pre-provision circuit authorizations
 
-If you are using circuit authorizations for cross-subscription gateway attachment (you checked that already right? ;) ) Then you are able to deploy these ahead of time on the new circuit. Generate the new authorizations and they will remain in the "available" state until redeemed at the gateway level. One less job to do during the migration window itself. 
+If you are using circuit authorizations for cross-subscription gateway attachment (you checked that already right? :grinning: ) Then you are able to deploy these ahead of time on the new circuit. Generate the new authorizations and they will remain in the "available" state until redeemed at the gateway level. One less job to do during the migration window itself. 
 
 ![](images/2021-08-04-13-24-58.png)
 
@@ -138,20 +137,19 @@ If you are using circuit authorizations for cross-subscription gateway attachmen
 
 ![](images/2021-08-05-15-41-57.png)
 
-Before we attach our new circuit to the production ExpressRoute Gateway, we want to ensure that traffic only fails over to this circuit when _we_ decide, and not unexpectedly due to routing logic we may have full visibility of. We want to do this to ensure that traffic to and from Azure remains symmetrical, this is especially important if On-Premises stateful firewalls are in use.
+Before we attach our new circuit to the production ExpressRoute Gateway, we want to ensure that traffic only fails over to this circuit when _we_ decide, and not unexpectedly due to routing logic we may not have full visibility of. We want to do this to ensure that traffic to and from Azure remains symmetrical, this is especially important if On-Premises stateful firewalls are in use.
 
 - To control traffic from **Azure to On-Premises** the most straight forward method is to change the Weight parameter, configured at the Connection object level. The default is 0, a higher weight wins, therefore lets set our existing connection to 100.
 
 ![](images/2021-08-04-22-30-44.png)
 
-- An alternative method to control traffic from **Azure to On-Premises** is to use as-path-
- from On-Premises in the direction of Azure - [full details](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-optimize-routing). Here is an example of a circuit that is receiving as-path-prepended routes from an On-Premises router. 
+- An alternative method to control traffic from **Azure to On-Premises** is to use AS-PATH from On-Premises in the direction of Azure - [full details](https://docs.microsoft.com/en-us/azure/expressroute/expressroute-optimize-routing). Here is an example of a circuit that is receiving AS-PATH prepended routes from an On-Premises router. 
 
 ![](images/2021-08-04-22-41-33.png)
 
 ![](images/2021-08-04-22-43-19.png)
 
-- To control traffic from **On-Premises to Azure** you will need to use BGP metric tuning - typically as-path-inbound, or local preference, depending on exact topology of your Customer edge routers. Configure a route-map on your on-premises router. Leverage this route-map to manipulate BGP metrics on routes received from Azure via the existing blue circuit. E.g. Configure your route-map to set Local Preference to 200. (Higher local pref wins, default is typically 100).
+- To control traffic from **On-Premises to Azure** you will need to use BGP metric tuning - typically AS-PATH inbound, or local preference, depending on exact topology of your Customer edge routers. Configure a route-map on your on-premises router. Leverage this route-map to manipulate BGP metrics on routes received from Azure via the existing blue circuit. E.g. Configure your route-map to set Local Preference to 200. (Higher local pref wins, default is typically 100).
 
 > Note! At this stage the circuit is still not connected to your existing/production ExpressRoute Gateway, but you have verified the route advertisements and attributes. 
 
@@ -163,11 +161,11 @@ At this point we have a high degree of confidence in the new circuit; we have pr
 
 - Create a new connection object that links your new circuit to your ExpressRoute Gateway, **ensure the Weight is set to 0**. 
 - Now is the time to also redeem the authorsations you created in an earlier step, effectively building connections from your circuit to gateways that reside in different subscriptions. Again, don't forget to set Weight to 0.
-- Verify, using AZ CLI, that the ExpressRoute gateway sees your on-premises prefixes via both circuits, and if using as-path manipulation inbound, that the as-path attributes are as you expect. 
+- Verify, using AZ CLI, that the ExpressRoute gateway sees your on-premises prefixes via both circuits, and if using AS-PATH manipulation inbound, that the AS-PATH attributes are as you expect. 
 
 _The example below shows my On-Premises prefix of 192.168.2.0/24 being learnt via 4 BGP neighbours (each ER circuit is represented by peerings to the Gateway), representing my lab configuration that uses two ER circuits._ 
 
-> Note visibility of BGP route metrics including as-path and weight (additive beyond baseline of 32xxx), allowing you to verify configuration changes made in step 3.4.
+> Note visibility of BGP route metrics including AS-PATH and weight (additive beyond baseline of 32xxx), allowing you to verify configuration changes made in step 3.4.
 
 ```
 az network vnet-gateway list-learned-routes -n ER-GW-WE -g GBB-ER-LAB-WE -o table
@@ -202,7 +200,7 @@ Which approach you choose will depend on factors such as;
 You when with option (a) or (b) above, you think everything appears to be working, how can we rubber stamp this and consider the migration a success?
 
 - To verify traffic from **Azure to On-Premises** is using the correct path
-  - From the ExpressRoute Gateway, you can re-run the command from earlier (`az network vnet-gateway list-learned-routes -n <gatewayname> -g <rg> -o table`) and verify that the preferred route (via weight, or as-path) has now flipped over to your other circuit.
+  - From the ExpressRoute Gateway, you can re-run the command from earlier (`az network vnet-gateway list-learned-routes -n <gatewayname> -g <rg> -o table`) and verify that the preferred route (via weight, or AS-PATH) has now flipped over to your other circuit.
 
 - To verify traffic from **On-Premises to Azure**  is using the correct path
   - Check your customer edge device, run the (for Cisco folks, or equivalent) of `show ip bgp <azure vnet prefix>`, the best path should represent the next-hop of your new circuit peerings IP addressing.
@@ -217,9 +215,9 @@ Now might also be a good time to solidify your investment of time in Monitoring 
 
 What if things are not working? Your app owners are still reporting problems after a period of UAT, and you need to press the _go back_ button? 
 
-- If you went with option (a), reconnect the old circuit by re-creating a connection object that links the old circuit to the ExpressRoute gateway
+- If you went with option (a), reconnect the old circuit by re-creating a connection object that links the old circuit to the ExpressRoute gateway. Also remember to rebuild any circuit-to-gateway connections that utilised authorsations.
 
-- If you went with option (b), reverse your weight and as-path metric changes
+- If you went with option (b), reverse your weight and AS-PATH metric changes
 
 ## 3.9. Cleanup
 
@@ -244,9 +242,8 @@ The process for migrating from Public Peering to Microsoft Peering is already we
 - When initially configured, you will receive no routes on the Microsoft Peering. Only when attaching a _route filter_ will you start to receive prefixes from Microsoft. https://docs.microsoft.com/en-us/azure/expressroute/how-to-routefilter-portal. 
   - You can use this to your advantage, initially selecting only one obscure BGP community, to validate route advertisements are functioning. 
   - Once this is complete, you can then select the wider range of services (BGP communities) that you require. 
-  - This approach allows a controlled migration, on a per service basis if you desire, when combined with BGP attribute manipulation (as-path-prepend inbound, or local-preference).
+  - This approach allows a controlled migration, on a per service basis if you desire, when combined with BGP attribute manipulation (AS-PATH prepend inbound, or local-preference).
 - If your current Public/Microsoft peering is authorised for use of M365, ensure to consider this moving forward. Take this opportunity to [question if you still need to send M365 traffic over ExpressRoute](https://www.microsoft.com/en-us/download/details.aspx?id=102899)? Authorisation to utilise this pattern is done on a per Azure subscription basis, therefore if your new circuits will reside in a new subscription, you will have to repeat the approval request.
-
 
 # 5. Further reading 
 
