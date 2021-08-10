@@ -252,5 +252,3 @@ The process for migrating from Public Peering to Microsoft Peering is already we
 - https://docs.microsoft.com/en-us/azure/expressroute/designing-for-disaster-recovery-with-expressroute-privatepeering#large-distributed-enterprise-network
 
 - https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs
-
-  
