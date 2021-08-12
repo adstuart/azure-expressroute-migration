@@ -197,7 +197,7 @@ Which approach you choose will depend on factors such as;
 
 ## 3.7. Validate
 
-You when with option (a) or (b) above, you think everything appears to be working, how can we rubber stamp this and consider the migration a success?
+You have now completed either option (a) or (b) above, you believe everything is working, how can we rubber stamp this and consider the migration a success?
 
 - To verify traffic from **Azure to On-Premises** is using the correct path
   - From the ExpressRoute Gateway, you can re-run the command from earlier (`az network vnet-gateway list-learned-routes -n <gatewayname> -g <rg> -o table`) and verify that the preferred route (via weight, or AS-PATH) has now flipped over to your other circuit.
