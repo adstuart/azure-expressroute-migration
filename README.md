@@ -203,7 +203,7 @@ You have now completed either option (a) or (b) above, you believe everything is
   - From the ExpressRoute Gateway, you can re-run the command from earlier (`az network vnet-gateway list-learned-routes -n <gatewayname> -g <rg> -o table`) and verify that the preferred route (via weight, or AS-PATH) has now flipped over to your other circuit.
 
 - To verify traffic from **On-Premises to Azure**  is using the correct path
-  - Check your customer edge device, run the (for Cisco folks, or equivalent) of `show ip bgp <azure vnet prefix>`, the best path should represent the next-hop of your new circuit peerings IP addressing.
+  - Check your customer edge device, run (for Cisco folks, or equivalent of) `show ip bgp <azure vnet prefix>`, the best path should represent the next-hop of your new circuit peerings IP addressing.
 
 Corroborate the above by checking the ExpressRoute circuit metrics in Azure Monitor, this can be accessed right from the _metrics_ blade in the portal. You should see traffic drop off your old circuit, and ramp up on your new circuit. In the below screenshot I have applied two metrics (bits-in and bits-out) along with splitting to force peering-type=private, finally I set time-range to _last 30 minutes_.
 
