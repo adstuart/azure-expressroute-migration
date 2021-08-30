@@ -252,3 +252,5 @@ The process for migrating from Public Peering to Microsoft Peering is already we
 - https://docs.microsoft.com/en-us/azure/expressroute/designing-for-disaster-recovery-with-expressroute-privatepeering#large-distributed-enterprise-network
 
 - https://docs.microsoft.com/en-us/azure/expressroute/expressroute-faqs
+
+- Go (much) deeper on how to control BGP in respect to ExpressRoute traffic engineer, thanks to Jeremy Wright, https://github.com/jwrightazure/lab/tree/master/Expressroute-Multicircuit-ASprepend-Localpref
