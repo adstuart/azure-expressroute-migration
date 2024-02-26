@@ -38,6 +38,8 @@ This guides suggest an approach to this migration process that focuses on seamle
 
 > :warning: This document assumes pre-existing knowledge of Azure, ExpressRoute and BGP. It is not designed to be read in isolation, but rather act as a high level guide, pointing you in the right direction, at the right places and get the project team asking the right questions to plan for success.
 
+> PS. There is now an official doc similar to this one, located here https://learn.microsoft.com/en-us/azure/expressroute/circuit-migration
+
 # 2. Context
 
 When having any ExpressRoute discussion its beneficial to agree on terms. This is best visualized in layers, highlighting the different components in any ExpressRoute design; 
